@@ -1,0 +1,288 @@
+<?php
+
+/**
+ * @file
+ * Implementation of a permanent url
+ */
+
+/**
+ * Implementation of hook_menu()
+ *
+ * Adds to the admin settings menu
+ */
+function dennis_permalink_menu() {
+  $items = array();
+
+  $items['admin/config/search/dennis_permalink'] = array(
+    'title'            => 'Dennis Permalink',
+    'description'      => 'Administer Dennis Permalink.',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('dennis_permalink_admin_settings'),
+    'access arguments' => array('administer dennis_permalink configuration'),
+    'type'             => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_permission()
+ */
+function dennis_permalink_permission() {
+  return array(
+    'administer dennis_permalink configuration' => array(
+      'title' => t('Administer Dennis Permalink'),
+      'description' => t('Perform administration tasks for Dennis Permalink.'),
+    ),
+  );
+}
+
+/**
+ * Menu callback for the adsense publisher ID settings form.
+ *
+ * @ingroup forms
+ */
+function dennis_permalink_admin_settings() {
+  $form = array();
+  $form['dennis_permalink_description'] = array(
+    '#type' => 'markup',
+    '#value' => t('Dennis Permalink configuration'),
+  );
+
+  $users_agents = variable_get('dennis_permalink_bots_no_redirect', '');
+  $users_agents_csv = join(',', $users_agents);
+  $form['dennis_permalink_bots_no_redirect'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('User agents that do not redirect'),
+    '#default_value' => $users_agents_csv,
+    '#description'   => t('Comma seperated list of user agents that should not redirect.'),
+  );
+
+  $form['#validate'][] = '_dennis_permalink_admin_settings_validate';
+
+  return system_settings_form($form);
+}
+
+/**
+ * Validate adsense_id_settings form.
+ */
+function _dennis_permalink_admin_settings_validate($form, &$form_state) {
+  $form_state['values']['dennis_permalink_bots_no_redirect'] = explode(',', $form_state['values']['dennis_permalink_bots_no_redirect']);
+}
+
+/**
+ * Implements hook_url_inbound_alter().
+ *
+ * hook_url_inbound_alter() happens before hook_redirect_load_by_source_alter()
+ * in _drupal_bootstrap_full() which calls drupal_path_initialize()
+ * a few lines before module_invoke_all('init') which eventually calls the redirect alter.
+ */
+function dennis_permalink_url_inbound_alter(&$path, $original_path, $path_language) {
+
+  if ($path != $original_path) {
+    // A router has already found this path so do nothing.
+    return;
+  }
+
+  if (dennis_permalink_is_permalink_path($path)) {
+    // Get the nid for this permalink, from the db, not just the pattern.
+    if ($nid = dennis_permalink_nid($original_path)) {
+      if (dennis_permalink_redirectable($path, $original_path)) {
+        // Do a redirect.
+        drupal_goto('node/' . $nid, array(), 301);
+      } else {
+        // Not allowed to do an actual redirect so replace the path with the internal one
+        // so the page loads as normal with the permalink url.
+        $path = 'node/' . $nid;
+      }
+    }
+    else {
+      // The path looked like our permalink, but had extra stuff so not really one.
+    }
+  }
+}
+
+/**
+ * Whether the given path is a permalink one (starts with [prefix/]go/).
+ */
+function dennis_permalink_is_permalink_path($path) {
+  $start = dennis_permalink_apply_prefix('');
+  if (strpos($path, $start) === 0) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * Add the required prefix & 'go' to the given path.
+ */
+function dennis_permalink_apply_prefix($path) {
+  $path = 'go/' . trim($path, '/');
+  $prefix = variable_get('dennis_permalink_prefix', '');
+  if (!empty($prefix)) {
+    // ensure the link starts with no slash as per Drupal convention.
+    $path = trim($prefix, '/') . '/' . $path;
+  }
+
+  return $path;
+}
+
+/**
+ * Whether a redirect can be used.
+ */
+function dennis_permalink_redirectable($path, $original_path) {
+  if (!dennis_permalink_ua_redirectable()) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * Whether a redirect can be used for the current user agent.
+ */
+function dennis_permalink_ua_redirectable() {
+  // These bots don't get redirects
+  $user_agents = variable_get('dennis_permalink_bots_no_redirect');
+  if (is_array($user_agents) && count($user_agents) > 0) {
+    if (isset($_SERVER['HTTP_USER_AGENT'])) {
+      foreach ($user_agents as $ua) {
+        if (stripos($_SERVER['HTTP_USER_AGENT'], trim($ua)) !== FALSE) {
+          return FALSE;
+        }
+      }
+    }
+  }
+  return TRUE;
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function dennis_permalink_node_insert($node) {
+  $link = dennis_permalink_generate_link($node->nid);
+  db_insert('permalink')->fields(array(
+    'nid' => $node->nid,
+    'link' => $link,
+  ))->execute();
+}
+
+/**
+ * Force the permalink to be a certain value.
+ *
+ * Usefull when importing nodes that already have permalink.
+ */
+function dennis_permalink_update($nid, $link) {
+  db_merge('permalink')
+  ->key(array(
+    'nid' => $nid,
+  ))
+  ->fields(array(
+    'nid' => $nid,
+    'link' => $link,
+  ))
+  ->execute();
+}
+
+/**
+ * Generate the permalink.
+ */
+function dennis_permalink_generate_link($nid) {
+  return dennis_permalink_apply_prefix($nid);
+}
+
+/**
+ * Implements hook_token_info().
+ */
+function dennis_permalink_token_info() {
+  $type = array(
+    'name' => t('Permalink'),
+    'description' => t('Tokens related to permalinks.'),
+  );
+
+  $tokens['link'] = array(
+    'name' => t("The permalink"),
+    'description' => t('The unique permanent link.'),
+  );
+
+  return array(
+    'types' => array('permalink' => $type),
+    'tokens' => array('permalink' => $tokens),
+  );
+}
+
+/**
+ * Implements hook_tokens().
+ */
+function dennis_permalink_tokens($type, $tokens, array $data = array(), array $options = array()) {
+  $replacements = array();
+  if ($type == 'permalink') {
+    foreach ($tokens as $name => $original) {
+      if ($name == 'link') {
+        $replacements[$original] = dennis_permalink_token_link($data);
+      }
+    }
+  }
+  return $replacements;
+}
+
+/**
+ * For the given nid, get the link.
+ */
+function dennis_permalink_link($nid) {
+  if (!is_numeric($nid)) {
+    // Can't be a nid so do nothing more.
+    return NULL;
+  }
+
+  $query = db_select('permalink', 'permalink');
+  $query->condition('permalink.nid', $nid, '=');
+  $query->fields('permalink', array('link'));
+  return $query->execute()->fetchField();
+}
+
+/**
+ * For the given link, get the nid if there is one.
+ */
+function dennis_permalink_nid($link, $lookup = TRUE) {
+  if ($lookup) {
+    // Get the stored nid from the db.
+    $query = db_select('permalink', 'permalink');
+    $query->condition('permalink.link', $link, '=');
+    $query->fields('permalink', array('nid'));
+    return $query->execute()->fetchField();
+  }
+  else {
+    // Get the nid from the permalink pattern.
+    $start = dennis_permalink_apply_prefix('');
+    // Remove the permalink start from the link, and remove end slashes.
+    // Not using regex as this is much faster.
+    $nid = trim(substr($link, strlen($start)), '/');
+    // Our nid should be all that's left, if not it's not a proper permalink.
+    if (is_numeric($nid)) {
+      return $nid;
+    }
+    return NULL;
+  }
+}
+
+/**
+ * Get the value of the 'link' token.
+ */
+function dennis_permalink_token_link($data) {
+  global $base_root;
+
+  if (!isset($data['node'])) {
+    return NULL;
+  }
+
+  // Get from the db if it exists.
+  $link = dennis_permalink_link($data['node']->nid);
+  if (empty($link)) {
+    $link = dennis_permalink_generate_link($data['node']->nid);
+  }
+
+  // Add the host too.
+  return $base_root . '/' . $link;
+}

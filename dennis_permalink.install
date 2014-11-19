@@ -1,0 +1,69 @@
+<?php
+
+/**
+ * Implement hook_install().
+ */
+function dennis_permalink_install() {
+  // These bots don't get redirect when using a permalink.
+  variable_set(
+    'dennis_permalink_bots_no_redirect',
+    array('facebookexternalhit')
+  );
+
+  // populate the permalink db with the CURRENT ALIAS of all nodes,
+  // not a new permalink on an existing node because a node's link may have already been shared.
+  $result = db_query("INSERT INTO permalink (nid, link) (
+    SELECT n.nid, a.alias
+    FROM node n
+    INNER JOIN url_alias a ON a.source = CONCAT('node/', CAST(n.nid AS CHAR))
+    LEFT JOIN permalink p ON p.nid = n.nid
+    WHERE p.nid IS NULL
+  )");
+
+  // Set the global metatag og:url to the permalink url
+  if (function_exists('metatag_config_load')) {
+    $config = metatag_config_load("global");
+    $config->config['og:url'] = array('value' => '[permalink:link]');
+    metatag_config_save($config);
+  }
+}
+
+/**
+ * Implement hook_uninstall().
+ */
+function dennis_permalink_uninstall() {
+  variable_del('dennis_permalink_prefix');
+  variable_del('dennis_permalink_bots_no_redirect');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function dennis_permalink_schema() {
+  $schema['permalink'] = array(
+    'description' => 'Permalink mapping table.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'The identifier for a node.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'link' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'The permanent link.',
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+      'link' => array('link'),
+    ),
+    'unique keys' => array(
+      'nid_link' => array('nid', 'link'),
+    ),
+    'primary key' => array('link'),
+  );
+  return $schema;
+}
