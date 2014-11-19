@@ -38,7 +38,7 @@ function dennis_permalink_permission() {
 }
 
 /**
- * Menu callback for the adsense publisher ID settings form.
+ * Menu callback for the Permalink settings form.
  *
  * @ingroup forms
  */
