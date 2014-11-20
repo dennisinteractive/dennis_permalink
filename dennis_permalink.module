@@ -6,7 +6,7 @@
  */
 
 /**
- * Implementation of hook_menu()
+ * Implements hook_menu().
  *
  * Adds to the admin settings menu
  */
@@ -26,7 +26,7 @@ function dennis_permalink_menu() {
 }
 
 /**
- * Implementation of hook_permission()
+ * Implements hook_permission().
  */
 function dennis_permalink_permission() {
   return array(
