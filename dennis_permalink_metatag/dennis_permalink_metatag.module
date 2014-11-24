@@ -1,1 +1,9 @@
 <?php
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function dennis_permalink_metatag_form_node_form_alter (&$form, &$form_state, $form_id) {
+  // Disable the og:url from being editable.
+  $form['metatags']['open-graph']['og:url']['value']['#disabled'] = TRUE;
+}

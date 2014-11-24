@@ -8,4 +8,10 @@ function dennis_permalink_metatag_install() {
   $config = metatag_config_load("global");
   $config->config['og:url'] = array('value' => '[permalink:link]');
   metatag_config_save($config);
+
+  // Set the weight above Metatag module's in order to alter the
+  // form element as there's no other way.
+  // See also metatag_form_alter() and change this when this function is either
+  // removed or altered when http://drupal.org/node/1284642 is fixed in core.
+  db_query("UPDATE {system} SET weight = 1 WHERE name = 'dennis_permalink_metatag'");
 }
