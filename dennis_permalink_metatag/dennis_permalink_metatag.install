@@ -1,0 +1,11 @@
+<?php
+
+/**
+ * Implement hook_install().
+ */
+function dennis_permalink_metatag_install() {
+  // Set the global metatag og:url to the permalink url
+  $config = metatag_config_load("global");
+  $config->config['og:url'] = array('value' => '[permalink:link]');
+  metatag_config_save($config);
+}

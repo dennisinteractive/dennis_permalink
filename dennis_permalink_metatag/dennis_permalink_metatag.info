@@ -1,0 +1,7 @@
+name = Dennis Permalink Metatag
+description = Permalink customization for the Metatag module.
+dependencies[] = "metatag"
+dependencies[] = "dennis_permalink"
+
+version = 7.x-1.0
+core = 7.x
