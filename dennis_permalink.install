@@ -18,6 +18,7 @@ function dennis_permalink_install() {
     INNER JOIN {url_alias} a ON a.source = CONCAT('node/', CAST(n.nid AS CHAR))
     LEFT JOIN {permalink} p ON p.nid = n.nid
     WHERE p.nid IS NULL
+    GROUP BY a.alias
   )");
 
   // Set the global metatag og:url to the permalink url
