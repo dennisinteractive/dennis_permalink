@@ -20,13 +20,6 @@ function dennis_permalink_install() {
     WHERE p.nid IS NULL
     GROUP BY a.alias
   )");
-
-  // Set the global metatag og:url to the permalink url
-  if (function_exists('metatag_config_load')) {
-    $config = metatag_config_load("global");
-    $config->config['og:url'] = array('value' => '[permalink:link]');
-    metatag_config_save($config);
-  }
 }
 
 /**

@@ -5,9 +5,11 @@
  */
 function dennis_permalink_metatag_install() {
   // Set the global metatag og:url to the permalink url
-  $config = metatag_config_load("global");
-  $config->config['og:url'] = array('value' => '[permalink:link]');
-  metatag_config_save($config);
+  if (function_exists('metatag_config_load')) {
+    $config = metatag_config_load("node");
+    $config->config['og:url'] = array('value' => '[permalink:link]');
+    metatag_config_save($config);
+  }
 
   // Set the weight above Metatag module's in order to alter the
   // form element as there's no other way.
