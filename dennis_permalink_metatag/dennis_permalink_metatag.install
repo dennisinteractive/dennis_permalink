@@ -15,5 +15,7 @@ function dennis_permalink_metatag_install() {
   // form element as there's no other way.
   // See also metatag_form_alter() and change this when this function is either
   // removed or altered when http://drupal.org/node/1284642 is fixed in core.
-  db_query("UPDATE {system} SET weight = 1 WHERE name = 'dennis_permalink_metatag'");
+  db_query("UPDATE {system} permalink_metatag, {system} metatag
+    SET permalink_metatag.weight = metatag.weight + 1
+    WHERE permalink_metatag.name = 'dennis_permalink_metatag' AND metatag.name = 'metatag'");
 }
