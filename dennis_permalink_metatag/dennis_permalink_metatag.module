@@ -4,6 +4,19 @@
  * Implements hook_form_BASE_FORM_ID_alter().
  */
 function dennis_permalink_metatag_form_node_form_alter (&$form, &$form_state, $form_id) {
-  // Disable the og:url from being editable.
-  $form['metatags']['open-graph']['og:url']['value']['#disabled'] = TRUE;
+  // Prevent metatags from being editable that use the [permalink:link] token.
+  foreach ($form['metatags'] as &$item) {
+    // Disable top level metatag form items.
+    if (isset($item['value']['#default_value']) && $item['value']['#default_value'] === '[permalink:link]') {
+      $item['value']['#disabled'] = TRUE;
+    }
+    // Disable metatag form items in a fieldset e.g. Open Graph and Advanced.
+    elseif (isset($item['#type']) && $item['#type'] === 'fieldset') {
+      foreach ($item as &$fieldset_item) {
+        if (isset($fieldset_item['value']['#default_value']) && $fieldset_item['value']['#default_value'] === '[permalink:link]') {
+          $fieldset_item['value']['#disabled'] = TRUE;
+        }
+      }
+    }
+  }
 }
