@@ -34,6 +34,10 @@ function dennis_permalink_permission() {
       'title' => t('Administer Dennis Permalink'),
       'description' => t('Perform administration tasks for Dennis Permalink.'),
     ),
+    'edit dennis_permalink links' => array(
+      'title' => t('Edit Dennis Permalink Links'),
+      'description' => t('Allows user to edit Dennis Permalinks when creating and editing nodes.'),
+    ),
   );
 }
 
@@ -161,17 +165,55 @@ function dennis_permalink_ua_redirectable() {
  * Implements hook_node_insert().
  */
 function dennis_permalink_node_insert($node) {
-  $link = dennis_permalink_generate_link($node->nid);
-  db_insert('permalink')->fields(array(
-    'nid' => $node->nid,
-    'link' => $link,
-  ))->execute();
+  dennis_permalink_node_save_link($node);
 }
 
 /**
- * Force the permalink to be a certain value.
+ * Implements hook_node_update().
+ */
+function dennis_permalink_node_update($node) {
+  dennis_permalink_node_save_link($node);
+}
+
+/**
+ * Update the specified node's permalink if necessary.
  *
- * Usefull when importing nodes that already have permalink.
+ * @param $node
+ */
+function dennis_permalink_node_save_link($node) {
+  // Get the current permalink.
+  if ($node->is_new) {
+    // New nodes will not have a permalink yet.
+    $current_link = NULL;
+  }
+  else {
+    // Get the current permalink for this node.
+    $current_link = dennis_permalink_link($node->nid);
+  }
+
+  // Use the user specifed permalink if available.
+  if (!empty($node->dennis_permalink)) {
+    $link = $node->dennis_permalink['permalink'];
+  }
+  else {
+    $link = dennis_permalink_generate_link($node->nid);
+  }
+
+  // If the link has changed (or is new), update the permalink.
+  if ($link != $current_link) {
+    dennis_permalink_update($node->nid, $link);
+
+    // Notify the user that the permalink was changed to a custom value.
+    if (!empty($node->dennis_permalink['permalink'])) {
+      drupal_set_message(t('Permalink set to !link', array('!link' => $link)));
+    }
+  }
+}
+
+/**
+ * Set the permalink to be a certain value.
+ *
+ * Useful when importing nodes that already have permalink.
  */
 function dennis_permalink_update($nid, $link) {
   db_merge('permalink')
@@ -285,4 +327,66 @@ function dennis_permalink_token_link($data) {
 
   // Add the host too.
   return $base_root . '/' . $link;
+}
+
+/**
+ * Implements hook_field_attach_form().
+ */
+function dennis_permalink_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode) {
+  // Set the permalink for this node.
+  $entity->dennis_permalink['permalink'] = isset($entity->nid) ? dennis_permalink_link($entity->nid) : '';
+
+  // Create a fieldset to organise permalink fields.
+  $form['dennis_permalink'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Permalink settings'),
+    '#group' => 'additional_settings',
+    '#attributes' => array(
+      'class' => array('dennis-permalink-form'),
+    ),
+    '#access' => user_access('edit dennis_permalink links'),
+    '#weight' => 30,
+    '#tree' => TRUE,
+    '#element_validate' => array('dennis_permalink_form_element_validate'),
+  );
+
+  // Attach the permalink JS.
+  $form['dennis_permalink']['#attached']['js'] = array(
+    'vertical-tabs' => drupal_get_path('module', 'dennis_permalink') . '/dennis_permalink.js'
+  );
+
+  // Add the permalink field to the fieldset.
+  $form['dennis_permalink']['permalink'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Permalink'),
+    '#default_value' => $entity->dennis_permalink['permalink'],
+    '#description' => t('Leave empty to use the default permalink.'),
+    '#access' => user_access('edit dennis_permalink links'),
+    '#weight' => 0,
+  );
+}
+
+/**
+ * Validate the permalink form element.
+ */
+function dennis_permalink_form_element_validate($element, &$form_state, $complete_form) {
+  $node = $form_state['node'];
+
+  // Trim the submitted value.
+  $permalink = trim($form_state['values']['dennis_permalink']['permalink']);
+
+  if (!empty($permalink)) {
+    form_set_value($element['permalink'], $permalink, $form_state);
+
+    // nid argument for query.
+    $nid = isset($node->nid) ? $node->nid : NULL;
+
+    // Ensure that the submitted permalink does not exist yet.
+    $query = db_select('permalink')->condition('link', $permalink)->condition('nid', $nid, '!=');
+    $query->addExpression('1');
+    $query->range(0, 1);
+    if ($query->execute()->fetchField()) {
+      form_error($element, t('The permalink is already in use.'));
+    }
+  }
 }
