@@ -192,7 +192,7 @@ function dennis_permalink_node_save_link($node) {
   }
 
   // Use the user specifed permalink if available.
-  if (!empty($node->dennis_permalink)) {
+  if (!empty($node->dennis_permalink['permalink'])) {
     $link = $node->dennis_permalink['permalink'];
   }
   else {
@@ -378,11 +378,14 @@ function dennis_permalink_form_element_validate($element, &$form_state, $complet
   if (!empty($permalink)) {
     form_set_value($element['permalink'], $permalink, $form_state);
 
-    // nid argument for query.
-    $nid = isset($node->nid) ? $node->nid : NULL;
-
     // Ensure that the submitted permalink does not exist yet.
-    $query = db_select('permalink')->condition('link', $permalink)->condition('nid', $nid, '!=');
+    $query = db_select('permalink')->condition('link', $permalink);
+
+    // Add nid argument to query if available.
+    if (isset($node->nid)) {
+      $query->condition('nid', $node->nid, '!=');
+    }
+
     $query->addExpression('1');
     $query->range(0, 1);
     if ($query->execute()->fetchField()) {
