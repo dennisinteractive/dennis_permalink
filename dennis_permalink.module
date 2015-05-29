@@ -136,6 +136,12 @@ function dennis_permalink_apply_prefix($path) {
  * Whether a redirect can be used.
  */
 function dennis_permalink_redirectable($path, $original_path) {
+  // Prevent cron being redirected.
+  if (strtok(request_uri(), '?') == '/cron.php') {
+    return FALSE;
+  }
+
+  // Check the user agent.
   if (!dennis_permalink_ua_redirectable()) {
     return FALSE;
   }
@@ -282,6 +288,21 @@ function dennis_permalink_link($nid) {
   $query->condition('permalink.nid', $nid, '=');
   $query->fields('permalink', array('link'));
   return $query->execute()->fetchField();
+}
+
+/**
+ * Get permalink nid by link.
+ */
+function dennis_permalink_get_nid($link) {
+  // Fetch permlink by link.
+  $query = db_select('permalink')->condition('link', $link);
+
+  $query->addField('permalink', 'nid', 'nid');
+  $query->range(0, 1);
+
+  if ($nid = $query->execute()->fetchField()) {
+    return $nid;
+  }
 }
 
 /**
