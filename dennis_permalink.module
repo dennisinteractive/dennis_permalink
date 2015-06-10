@@ -93,8 +93,10 @@ function dennis_permalink_url_inbound_alter(&$path, $original_path, $path_langua
     if ($nid = dennis_permalink_nid($original_path)) {
       if (dennis_permalink_redirectable($path, $original_path)) {
         // Do a redirect.
-        drupal_goto('node/' . $nid, array(), 301);
-      } else {
+        $query = drupal_get_query_parameters();
+        drupal_goto('node/' . $nid, array('query' => $query), 301);
+      }
+      else {
         // Not allowed to do an actual redirect so replace the path with the internal one
         // so the page loads as normal with the permalink url.
         $path = 'node/' . $nid;
@@ -107,7 +109,7 @@ function dennis_permalink_url_inbound_alter(&$path, $original_path, $path_langua
 }
 
 /**
- * Whether the given path is a permalink one (starts with [prefix/]go/).
+ * Whether the given path is a permalink one (contains /go/).
  */
 function dennis_permalink_is_permalink_path($path) {
   if (strpos('/' . $path, '/go/') !== FALSE) {
