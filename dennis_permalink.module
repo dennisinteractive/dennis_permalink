@@ -110,8 +110,7 @@ function dennis_permalink_url_inbound_alter(&$path, $original_path, $path_langua
  * Whether the given path is a permalink one (starts with [prefix/]go/).
  */
 function dennis_permalink_is_permalink_path($path) {
-  $start = dennis_permalink_apply_prefix('');
-  if (strpos($path, $start) === 0) {
+  if (strpos('/' . $path, '/go/') !== FALSE) {
     return TRUE;
   }
 
