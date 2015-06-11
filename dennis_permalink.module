@@ -348,7 +348,7 @@ function dennis_permalink_token_link($data) {
   }
 
   // Add the host too.
-  return $base_root . '/' . $link;
+  return variable_get('dennis_permalink_base_root', $base_root) . '/' . $link;
 }
 
 /**
