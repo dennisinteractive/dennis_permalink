@@ -355,6 +355,10 @@ function dennis_permalink_token_link($data) {
  * Implements hook_field_attach_form().
  */
 function dennis_permalink_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode) {
+  if ($entity_type !== 'node') {
+    return;
+  }
+
   // Set the permalink for this node.
   $entity->dennis_permalink['permalink'] = isset($entity->nid) ? dennis_permalink_link($entity->nid) : '';
 
