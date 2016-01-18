@@ -49,15 +49,45 @@ function dennis_permalink_schema() {
         'not null' => TRUE,
         'description' => 'The permanent link.',
       ),
+      'host' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Destination host.',
+        'default' => '',
+      ),
     ),
     'indexes' => array(
       'nid' => array('nid'),
       'link' => array('link'),
+      'host' => array('host'),
     ),
     'unique keys' => array(
       'nid_link' => array('nid', 'link'),
     ),
-    'primary key' => array('link'),
+    'primary key' => array('nid'),
   );
   return $schema;
+}
+
+/**
+ * Update DB schema.
+ */
+function dennis_permalink_update_7100() {
+  // Grab new field and primary key from schema.
+  $schema = dennis_permalink_schema();
+  $field_spec = $schema['permalink']['fields']['host'];
+  $primary_key = array('primary key' => $schema['permalink']['primary key']);
+
+  // Change primary key and add new host field.
+  db_drop_primary_key('permalink');
+  db_add_field('permalink', 'host', $field_spec, $primary_key);
+
+  // Fill host column with current base URL.
+  db_update('permalink')
+    ->fields(array(
+      'host' => trim(variable_get('dennis_permalink_base_root', ''), '/')
+    ))
+    ->condition('host', '')
+    ->execute();
 }

@@ -208,11 +208,14 @@ function dennis_permalink_node_save_link($node) {
 
   // If the link has changed (or is new), update the permalink.
   if ($link != $current_link) {
-    dennis_permalink_update($node->nid, $link);
+    $result = dennis_permalink_update($node->nid, $link);
 
     // Notify the user that the permalink was changed to a custom value.
-    if (!empty($node->dennis_permalink['permalink'])) {
+    if ($result && !empty($node->dennis_permalink['permalink'])) {
       drupal_set_message(t('Permalink set to !link', array('!link' => $link)));
+    }
+    else {
+      drupal_set_message(t('Permalink could not be set to !link', array('!link' => $link)), 'error');
     }
   }
 }
@@ -221,24 +224,59 @@ function dennis_permalink_node_save_link($node) {
  * Set the permalink to be a certain value.
  *
  * Useful when importing nodes that already have permalink.
+ *
+ * @param $nid
+ * @param $permalink
+ * @return bool|int
+ *  This can be a local path or full URL if it originates from a 3rd-party site.
+ * @throws Exception
+ * @throws InvalidMergeQueryException
  */
-function dennis_permalink_update($nid, $link) {
-  db_merge('permalink')
-  ->key(array(
-    'nid' => $nid,
-  ))
-  ->fields(array(
-    'nid' => $nid,
-    'link' => $link,
-  ))
-  ->execute();
+function dennis_permalink_update($nid, $permalink) {
+  global $base_root;
+
+  $url_parts = parse_url($permalink);
+
+  if (!empty($url_parts['scheme']) && !empty($url_parts['host'])) {
+    // Extract the path and host from the URL.
+    $host = $url_parts['scheme'] . '://' . $url_parts['host'];
+  }
+  else {
+    $host = variable_get('dennis_permalink_base_root', $base_root);
+  }
+
+  if (!empty($url_parts['path'])) {
+    $link = ltrim($url_parts['path'], '/');
+    // Trim leading slash and append query string if provided.
+    if (!empty($url_parts['query'])) {
+      $link .= '?' . $url_parts['query'];
+    }
+  }
+  else {
+    // Could not extract a path so return FALSE.
+    return FALSE;
+  }
+
+  return db_merge('permalink')
+    ->key(array(
+      'nid' => $nid,
+    ))
+    ->fields(array(
+      'nid' => $nid,
+      'link' => $link,
+      'host' => $host,
+    ))
+    ->execute();
 }
 
 /**
  * Generate the permalink.
  */
 function dennis_permalink_generate_link($nid) {
-  return dennis_permalink_apply_prefix($nid);
+  global $base_root;
+  $path = dennis_permalink_apply_prefix($nid);
+  $host = variable_get('dennis_permalink_base_root', $base_root);
+  return $host . '/' . $path;
 }
 
 /**
@@ -287,8 +325,10 @@ function dennis_permalink_link($nid) {
 
   $query = db_select('permalink', 'permalink');
   $query->condition('permalink.nid', $nid, '=');
-  $query->fields('permalink', array('link'));
-  return $query->execute()->fetchField();
+  $query->fields('permalink', array('host', 'link'));
+  $row = $query->execute()->fetchObject();
+
+  return $row->host . '/' . $row->link;
 }
 
 /**
@@ -347,8 +387,7 @@ function dennis_permalink_token_link($data) {
     $link = dennis_permalink_generate_link($data['node']->nid);
   }
 
-  // Add the host too.
-  return variable_get('dennis_permalink_base_root', $base_root) . '/' . $link;
+  return $link;
 }
 
 /**
