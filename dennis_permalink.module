@@ -92,9 +92,18 @@ function dennis_permalink_url_inbound_alter(&$path, $original_path, $path_langua
     // Get the nid for this permalink, from the db, not just the pattern.
     if ($nid = dennis_permalink_nid($original_path)) {
       if (dennis_permalink_redirectable($path, $original_path)) {
-        // Do a redirect.
-        $query = drupal_get_query_parameters();
-        drupal_goto('node/' . $nid, array('query' => $query), 301);
+        // Redirect to node URL by default.
+        $redirect = array(
+          'path' => 'node/' . $nid,
+          'options' => array('query' => drupal_get_query_parameters()),
+          'http_response_code' => 301,
+        );
+
+        // Let other modules change the redirect.
+        drupal_alter('permalink_redirect', $redirect, $nid);
+
+        // Do the redirect.
+        drupal_goto($redirect['path'], $redirect['options'], $redirect['http_response_code']);
       }
       else {
         // Not allowed to do an actual redirect so replace the path with the internal one
