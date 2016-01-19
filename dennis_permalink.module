@@ -62,6 +62,12 @@ function dennis_permalink_admin_settings() {
     '#description'   => t('Comma seperated list of user agents that should not redirect.'),
   );
 
+  $form['dennis_permalink_expose_in_rss'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Expose as og:url in RSS feeds'),
+    '#default_value' => variable_get('dennis_permalink_expose_in_rss', 0),
+  );
+
   $form['#validate'][] = '_dennis_permalink_admin_settings_validate';
 
   return system_settings_form($form);
@@ -465,5 +471,33 @@ function dennis_permalink_form_element_validate($element, &$form_state, $complet
     if ($query->execute()->fetchField()) {
       form_error($element, t('The permalink is already in use.'));
     }
+  }
+}
+
+/**
+ * Implements hook_node_view()
+ *
+ * Add og:url to RSS feed.
+ */
+function dennis_permalink_node_view($node, $view_mode) {
+  // Only add to feed if configured to do so.
+  if (!variable_get('dennis_permalink_expose_in_rss', 0)) {
+    return;
+  }
+
+  // Add only to RSS node views.
+  if ($view_mode == 'rss') {
+    // Maintain RDF namespaces if they are available.
+    if (function_exists('rdf_get_namespaces')) {
+      foreach (rdf_get_namespaces() as $prefix => $uri) {
+        $node->rss_namespaces['xmlns:' . $prefix] = $uri;
+      }
+    }
+    // Ensure OG namespace is added for og:url.
+    $node->rss_namespaces['xmlns:og'] = 'http://ogp.me/ns#';
+    $node->rss_elements[1] = array(
+      'key' => 'og:url',
+      'value' => dennis_permalink_link($node->nid)
+    );
   }
 }
