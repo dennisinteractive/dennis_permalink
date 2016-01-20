@@ -236,6 +236,41 @@ function dennis_permalink_node_save_link($node) {
 }
 
 /**
+ * Helper to split permalink into host and link.
+ *
+ * @param $permalink
+ * @return array|bool
+ */
+function dennis_permalink_get_link_parts($permalink) {
+  global $base_root;
+
+  $url_parts = parse_url($permalink);
+  $link_parts = array();
+
+  if (!empty($url_parts['scheme']) && !empty($url_parts['host'])) {
+    // Extract the path and host from the URL.
+    $link_parts['host'] = $url_parts['scheme'] . '://' . $url_parts['host'];
+  }
+  else {
+    $link_parts['host'] = variable_get('dennis_permalink_base_root', $base_root);
+  }
+
+  if (!empty($url_parts['path'])) {
+    $link_parts['link'] = ltrim($url_parts['path'], '/');
+    // Trim leading slash and append query string if provided.
+    if (!empty($url_parts['query'])) {
+      $link_parts['link'] .= '?' . $url_parts['query'];
+    }
+  }
+  else {
+    // Could not extract a path so return FALSE.
+    return FALSE;
+  }
+
+  return $link_parts;
+}
+
+/**
  * Set the permalink to be a certain value.
  *
  * Useful when importing nodes that already have permalink.
@@ -248,40 +283,21 @@ function dennis_permalink_node_save_link($node) {
  * @throws InvalidMergeQueryException
  */
 function dennis_permalink_update($nid, $permalink) {
-  global $base_root;
-
-  $url_parts = parse_url($permalink);
-
-  if (!empty($url_parts['scheme']) && !empty($url_parts['host'])) {
-    // Extract the path and host from the URL.
-    $host = $url_parts['scheme'] . '://' . $url_parts['host'];
-  }
-  else {
-    $host = variable_get('dennis_permalink_base_root', $base_root);
-  }
-
-  if (!empty($url_parts['path'])) {
-    $link = ltrim($url_parts['path'], '/');
-    // Trim leading slash and append query string if provided.
-    if (!empty($url_parts['query'])) {
-      $link .= '?' . $url_parts['query'];
-    }
-  }
-  else {
-    // Could not extract a path so return FALSE.
-    return FALSE;
+  if ($link_parts = dennis_permalink_get_link_parts($permalink)) {
+    return db_merge('permalink')
+      ->key(array(
+        'nid' => $nid,
+      ))
+      ->fields(array(
+        'nid' => $nid,
+        'link' => $link_parts['link'],
+        'host' => $link_parts['host'],
+      ))
+      ->execute();
   }
 
-  return db_merge('permalink')
-    ->key(array(
-      'nid' => $nid,
-    ))
-    ->fields(array(
-      'nid' => $nid,
-      'link' => $link,
-      'host' => $host,
-    ))
-    ->execute();
+  // Could not extract a path so return FALSE.
+  return FALSE;
 }
 
 /**
@@ -454,12 +470,14 @@ function dennis_permalink_form_element_validate($element, &$form_state, $complet
 
   // Trim the submitted value.
   $permalink = trim($form_state['values']['dennis_permalink']['permalink']);
+  $link_parts = dennis_permalink_get_link_parts($permalink);
 
   if (!empty($permalink)) {
     form_set_value($element['permalink'], $permalink, $form_state);
 
     // Ensure that the submitted permalink does not exist yet.
-    $query = db_select('permalink')->condition('link', $permalink);
+    $query = db_select('permalink')
+      ->condition('link', $link_parts['link']);
 
     // Add nid argument to query if available.
     if (isset($node->nid)) {
