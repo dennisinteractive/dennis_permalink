@@ -236,6 +236,22 @@ function dennis_permalink_node_save_link($node) {
 }
 
 /**
+ * Delete permalink when its node is deleted.
+ *
+ * @param $node
+ * @return mixed
+ */
+function dennis_permalink_node_delete($node) {
+  if (empty($node->nid)) {
+    return;
+  }
+
+  db_delete('permalink')
+    ->condition('nid', $node->nid)
+    ->execute();
+}
+
+/**
  * Helper to split permalink into host and link.
  *
  * @param $permalink
