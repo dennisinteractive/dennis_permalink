@@ -229,9 +229,6 @@ function dennis_permalink_node_save_link($node) {
     if ($result && !empty($node->dennis_permalink['permalink'])) {
       drupal_set_message(t('Permalink set to !link', array('!link' => $link)));
     }
-    else {
-      drupal_set_message(t('Permalink could not be set to !link', array('!link' => $link)), 'error');
-    }
   }
 }
 
