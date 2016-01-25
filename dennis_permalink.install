@@ -63,7 +63,7 @@ function dennis_permalink_schema() {
       'host' => array('host'),
     ),
     'unique keys' => array(
-      'nid_link' => array('nid', 'link'),
+      'host_link' => array('host', 'link'),
     ),
     'primary key' => array('nid'),
   );
@@ -77,11 +77,15 @@ function dennis_permalink_update_7100() {
   // Grab new field and primary key from schema.
   $schema = dennis_permalink_schema();
   $field_spec = $schema['permalink']['fields']['host'];
-  $primary_key = array('primary key' => $schema['permalink']['primary key']);
+  $keys_new = array(
+    'primary key' => $schema['permalink']['primary key'],
+    'unique keys' => $schema['permalink']['unique keys'],
+  );
 
   // Change primary key and add new host field.
   db_drop_primary_key('permalink');
-  db_add_field('permalink', 'host', $field_spec, $primary_key);
+  db_drop_unique_key('permalink', 'nid_link');
+  db_add_field('permalink', 'host', $field_spec, $keys_new);
 
   // Fill host column with current base URL.
   db_update('permalink')
