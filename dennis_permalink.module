@@ -223,10 +223,10 @@ function dennis_permalink_node_save_link($node) {
 
   // If the link has changed (or is new), update the permalink.
   if ($link != $current_link) {
-    $result = dennis_permalink_update($node->nid, $link);
+    dennis_permalink_update($node->nid, $link);
 
     // Notify the user that the permalink was changed to a custom value.
-    if ($result && !empty($node->dennis_permalink['permalink'])) {
+    if (!empty($node->dennis_permalink['permalink'])) {
       drupal_set_message(t('Permalink set to !link', array('!link' => $link)));
     }
   }
@@ -297,7 +297,7 @@ function dennis_permalink_get_link_parts($permalink) {
  */
 function dennis_permalink_update($nid, $permalink) {
   if ($link_parts = dennis_permalink_get_link_parts($permalink)) {
-    return db_merge('permalink')
+     db_merge('permalink')
       ->key(array(
         'nid' => $nid,
       ))
@@ -308,9 +308,6 @@ function dennis_permalink_update($nid, $permalink) {
       ))
       ->execute();
   }
-
-  // Could not extract a path so return FALSE.
-  return FALSE;
 }
 
 /**
