@@ -226,7 +226,7 @@ function dennis_permalink_node_save_link($node) {
     dennis_permalink_update($node->nid, $link);
 
     // Notify the user that the permalink was changed to a custom value.
-    if (!empty($node->dennis_permalink['permalink'])) {
+    if (!empty($node->dennis_permalink['permalink']) && !$node->is_new) {
       drupal_set_message(t('Permalink set to !link', array('!link' => $link)));
     }
   }
