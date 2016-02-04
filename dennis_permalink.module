@@ -203,26 +203,37 @@ function dennis_permalink_node_update($node) {
  * @param $node
  */
 function dennis_permalink_node_save_link($node) {
-  // Get the current permalink.
+  // By default leave the permalink alone.
+  $link = NULL;
+
+  // Get the current permalink and generate permalink if necessary.
   if ($node->is_new) {
     // New nodes will not have a permalink yet.
     $current_link = NULL;
+    // Generate new permalink for new nodes.
+    $link = dennis_permalink_generate_link($node->nid);
   }
   else {
     // Get the current permalink for this node.
     $current_link = dennis_permalink_link($node->nid);
+    // Create permalink if one doesn't exist yet.
+    if (empty($current_link)) {
+      $link = dennis_permalink_generate_link($node->nid);
+    }
   }
 
-  // Use the user specifed permalink if available.
-  if (!empty($node->dennis_permalink['permalink'])) {
-    $link = $node->dennis_permalink['permalink'];
-  }
-  else {
+  // Regenerate permalink if the user provided value is set but empty.
+  if (isset($node->dennis_permalink['permalink']) && empty($node->dennis_permalink['permalink'])) {
     $link = dennis_permalink_generate_link($node->nid);
   }
 
-  // If the link has changed (or is new), update the permalink.
-  if ($link != $current_link) {
+  // Use the user specified permalink if available and is different to current link.
+  if (!empty($node->dennis_permalink['permalink']) && $current_link != $node->dennis_permalink['permalink']) {
+    $link = $node->dennis_permalink['permalink'];
+  }
+
+  // If the link has changed, is new, or doesn't exist yet, update the permalink.
+  if (!empty($link)) {
     dennis_permalink_update($node->nid, $link);
 
     // Notify the user that the permalink was changed to a custom value.
@@ -367,9 +378,9 @@ function dennis_permalink_link($nid) {
   $query = db_select('permalink', 'permalink');
   $query->condition('permalink.nid', $nid, '=');
   $query->fields('permalink', array('host', 'link'));
-  $row = $query->execute()->fetchObject();
-
-  return $row->host . '/' . $row->link;
+  if ($row = $query->execute()->fetchObject()) {
+    return $row->host . '/' . $row->link;
+  }
 }
 
 /**
