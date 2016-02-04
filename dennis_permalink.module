@@ -206,7 +206,7 @@ function dennis_permalink_node_save_link($node) {
   // By default leave the permalink alone.
   $link = NULL;
 
-  // Get the current permalink and generate permalink if necessary.
+  // Get the current permalink.
   if ($node->is_new) {
     // New nodes will not have a permalink yet.
     $current_link = NULL;
