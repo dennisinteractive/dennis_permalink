@@ -210,20 +210,15 @@ function dennis_permalink_node_save_link($node) {
   if ($node->is_new) {
     // New nodes will not have a permalink yet.
     $current_link = NULL;
-    // Generate new permalink for new nodes.
-    $link = dennis_permalink_generate_link($node->nid);
   }
   else {
     // Get the current permalink for this node.
     $current_link = dennis_permalink_link($node->nid);
-    // Create permalink if one doesn't exist yet.
-    if (empty($current_link)) {
-      $link = dennis_permalink_generate_link($node->nid);
-    }
   }
 
-  // Regenerate permalink if the user provided value is set but empty.
-  if (isset($node->dennis_permalink['permalink']) && empty($node->dennis_permalink['permalink'])) {
+  // Regenerate permalink if the user provided value is set but empty or there is no current link.
+  $provided_empty = isset($node->dennis_permalink['permalink']) && empty($node->dennis_permalink['permalink']);
+  if ($provided_empty || empty($current_link)) {
     $link = dennis_permalink_generate_link($node->nid);
   }
 
