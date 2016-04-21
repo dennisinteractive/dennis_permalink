@@ -473,6 +473,8 @@ function dennis_permalink_field_attach_form($entity_type, $entity, &$form, &$for
     '#description' => t('Leave empty to use the default permalink.'),
     '#access' => user_access('edit dennis_permalink links'),
     '#weight' => 0,
+    // Combined maxlength of link and host.
+    '#maxlength' => 400,
   );
 }
 
@@ -488,6 +490,10 @@ function dennis_permalink_form_element_validate($element, &$form_state, $complet
 
   if (!empty($permalink)) {
     form_set_value($element['permalink'], $permalink, $form_state);
+
+    if(strlen($link_parts['link']) > 255) {
+      form_error($element, t('Permalink max length cannot be more than 255 character'));
+    }
 
     // Ensure that the submitted permalink does not exist yet.
     $query = db_select('permalink')
