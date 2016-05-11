@@ -491,25 +491,46 @@ function dennis_permalink_form_element_validate($element, &$form_state, $complet
   if (!empty($permalink)) {
     form_set_value($element['permalink'], $permalink, $form_state);
 
-    if(strlen($link_parts['link']) > 255) {
+    if (strlen($link_parts['link']) > 255) {
       form_error($element, t('Permalink max length cannot be more than 255 character'));
+      return;
     }
 
     // Ensure that the submitted permalink does not exist yet.
-    $query = db_select('permalink')
-      ->condition('link', $link_parts['link']);
-
-    // Add nid argument to query if available.
-    if (isset($node->nid)) {
-      $query->condition('nid', $node->nid, '!=');
-    }
-
-    $query->addExpression('1');
-    $query->range(0, 1);
-    if ($query->execute()->fetchField()) {
-      form_error($element, t('The permalink is already in use.'));
+    if (dennis_permalink_permalink_exists($permalink, $node->nid)) {
+      form_error($element, t('The permalink %$permalink is already in use.', array('%$permalink' => $permalink)));
+      return;
     }
   }
+}
+
+/**
+ * Checks if a permalink exists.
+ *
+ * @param $link The link to check.
+ * @param $nid Exlude nid (optional).
+ * @return TRUE or FALSE.
+ */
+function dennis_permalink_permalink_exists($permalink, $nid = NULL) {
+  $link_parts = dennis_permalink_get_link_parts($permalink);
+
+  $query = db_select('permalink')
+    ->condition('link', $link_parts['link'])
+    ->condition('host', $link_parts['host']);
+
+  // Add nid argument to query if available.
+  if (!is_null($nid)) {
+    $query->condition('nid', $nid, '!=');
+  }
+
+  $query->addExpression('1');
+  $query->range(0, 1);
+
+  if ($query->execute()->fetchField()) {
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 /**
