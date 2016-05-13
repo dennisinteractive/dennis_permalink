@@ -508,7 +508,7 @@ function dennis_permalink_form_element_validate($element, &$form_state, $complet
  * Checks if a permalink exists.
  *
  * @param $link The link to check.
- * @param $nid Exlude nid (optional).
+ * @param $nid Exclude nid (optional).
  * @return TRUE or FALSE.
  */
 function dennis_permalink_permalink_exists($permalink, $nid = NULL) {
