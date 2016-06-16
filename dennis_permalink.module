@@ -380,10 +380,16 @@ function dennis_permalink_link($nid) {
 
 /**
  * Get permalink nid by link.
+ *
+ * @param $link_parts
+ * @return $nid
  */
-function dennis_permalink_get_nid($link) {
-  // Fetch permlink by link.
-  $query = db_select('permalink')->condition('link', $link);
+function dennis_permalink_get_nid($link_parts) {
+  die();
+  dpm($link_parts);
+  $query = db_select('permalink')
+    ->condition('link', $link_parts['link'])
+    ->condition('host', $link_parts['host']);
 
   $query->addField('permalink', 'nid', 'nid');
   $query->range(0, 1);
@@ -490,6 +496,7 @@ function dennis_permalink_field_attach_form($entity_type, $entity, &$form, &$for
 
 /**
  * Validate the permalink form element.
+ * @todo get nid to do the swap.
  */
 function dennis_permalink_form_element_validate($element, &$form_state, $complete_form) {
   $node = $form_state['node'];
@@ -507,10 +514,20 @@ function dennis_permalink_form_element_validate($element, &$form_state, $complet
     }
 
     // Ensure that the submitted permalink does not exist yet.
-    if (dennis_permalink_permalink_exists($permalink, $node->nid)) {
+    if (dennis_permalink_permalink_exists($permalink, $node->nid) && !$form_state['values']['dennis_permalink']['replace_existing']) {
+      // If linked to another published node, show message.
       form_error($element, t('The permalink %$permalink is already in use.', array('%$permalink' => $permalink)));
-      return;
     }
+    else {
+      // If linked to another unpublished node, reset other node permalink.
+      if (dennis_permalink_permalink_exists($permalink, $node->nid)) {
+        $nid = dennis_permalink_get_nid($link_parts);
+        dennis_permalink_generate_link($nid, $permalink);
+        dpm('Permalink RESET!!!');
+      }
+
+    }
+    return;
   }
 }
 
