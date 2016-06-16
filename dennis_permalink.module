@@ -476,6 +476,16 @@ function dennis_permalink_field_attach_form($entity_type, $entity, &$form, &$for
     // Combined maxlength of link and host.
     '#maxlength' => 400,
   );
+
+  // Flag to update permalink value.
+  $form['dennis_permalink']['replace_existing'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Replace existing permalink.'),
+    '#default_value' => FALSE,
+    '#description' => t('Check if any hreflang from the list is linked to another node, so other\'s node permalink will need to be regenerated.'),
+    '#access' => user_access('Administer Dennis Permalink'),
+    '#weight' => 1,
+  );
 }
 
 /**
