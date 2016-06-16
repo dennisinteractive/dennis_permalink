@@ -385,8 +385,6 @@ function dennis_permalink_link($nid) {
  * @return $nid
  */
 function dennis_permalink_get_nid($link_parts) {
-  die();
-  dpm($link_parts);
   $query = db_select('permalink')
     ->condition('link', $link_parts['link'])
     ->condition('host', $link_parts['host']);
@@ -523,7 +521,6 @@ function dennis_permalink_form_element_validate($element, &$form_state, $complet
       if (dennis_permalink_permalink_exists($permalink, $node->nid)) {
         $nid = dennis_permalink_get_nid($link_parts);
         dennis_permalink_generate_link($nid, $permalink);
-        dpm('Permalink RESET!!!');
       }
 
     }
