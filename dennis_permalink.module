@@ -229,6 +229,13 @@ function dennis_permalink_node_save_link($node) {
 
   // If the link has changed, is new, or doesn't exist yet, update the permalink.
   if (!empty($link)) {
+    // If linked to another unpublished node, reset other node permalink.
+    if (dennis_permalink_permalink_exists($link)) {
+      $link_parts = dennis_permalink_get_link_parts($link);
+      $nid = dennis_permalink_get_nid($link_parts);
+      dennis_permalink_generate_link($nid);
+      drupal_set_message(t('node/' . $nid . ' Permalink updated to !link', array('!link' => $link)));
+    }
     dennis_permalink_update($node->nid, $link);
 
     // Notify the user that the permalink was changed to a custom value.
@@ -512,19 +519,10 @@ function dennis_permalink_form_element_validate($element, &$form_state, $complet
     }
 
     // Ensure that the submitted permalink does not exist yet.
-    if (dennis_permalink_permalink_exists($permalink, $node->nid) && !$form_state['values']['dennis_permalink']['replace_existing']) {
-      // If linked to another published node, show message.
+    if (dennis_permalink_permalink_exists($permalink, $node->nid)) {
       form_error($element, t('The permalink %$permalink is already in use.', array('%$permalink' => $permalink)));
+      return;
     }
-    else {
-      // If linked to another unpublished node, reset other node permalink.
-      if (dennis_permalink_permalink_exists($permalink, $node->nid)) {
-        $nid = dennis_permalink_get_nid($link_parts);
-        dennis_permalink_generate_link($nid, $permalink);
-      }
-
-    }
-    return;
   }
 }
 
