@@ -226,17 +226,7 @@ function dennis_permalink_node_save_link($node) {
   if (!empty($node->dennis_permalink['permalink']) && $current_link != $node->dennis_permalink['permalink']) {
     $link = $node->dennis_permalink['permalink'];
   }
-
-
   if (!empty($link)) {
-    // If the link has changed, is new, or doesn't exist yet, update the permalink.
-    dennis_permalink_update($node->nid, $link);
-
-    // Notify the user that the permalink was changed to a custom value.
-    if (!empty($node->dennis_permalink['permalink']) && !$node->is_new) {
-      drupal_set_message(t('Permalink set to !link', array('!link' => $link)));
-    }
-
     // If permalink already set on another node, reset it.
     if (dennis_permalink_permalink_exists($link) && $node->dennis_permalink['replace_existing']) {
       $link_parts = dennis_permalink_get_link_parts($link);
@@ -245,6 +235,14 @@ function dennis_permalink_node_save_link($node) {
       dennis_permalink_update($node->nid, $updated_link);
       drupal_set_message(t('node/' . $nid . ' permalink was reset to !updated_link', array('!updated_link' => $updated_link)));
     }
+    // If the link has changed, is new, or doesn't exist yet, update the permalink.
+    dennis_permalink_update($node->nid, $link);
+
+    // Notify the user that the permalink was changed to a custom value.
+    if (!empty($node->dennis_permalink['permalink']) && !$node->is_new) {
+      drupal_set_message(t('Permalink set to !link', array('!link' => $link)));
+    }
+
   }
 }
 
@@ -490,6 +488,13 @@ function dennis_permalink_field_attach_form($entity_type, $entity, &$form, &$for
     // Combined maxlength of link and host.
     '#maxlength' => 400,
   );
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ */
+function dennis_permalink_form_node_form_alter(&$form, $form_state) {
 
   // Flag to update permalink value.
   $form['dennis_permalink']['replace_existing'] = array(
@@ -501,6 +506,7 @@ function dennis_permalink_field_attach_form($entity_type, $entity, &$form, &$for
     '#weight' => 1,
   );
 }
+
 
 /**
  * Validate the permalink form element.
