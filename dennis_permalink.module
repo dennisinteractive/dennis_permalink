@@ -239,7 +239,7 @@ function dennis_permalink_node_save_link($node) {
 
     // Notify the user that the permalink was changed to a custom value.
     if (!empty($node->dennis_permalink['permalink']) && !$node->is_new) {
-      drupal_set_message(t('Permalink set to !link', array('!link' => $link)));
+      drupal_set_message(t('The current node permalink is set to !link', array('!link' => $link)));
     }
 
   }
@@ -491,9 +491,9 @@ function dennis_permalink_field_attach_form($entity_type, $entity, &$form, &$for
   // Flag to update permalink value.
   $form['dennis_permalink']['replace_existing'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Replace existing permalink.'),
+    '#title' => t('Reset permalink in other linked node.'),
     '#default_value' => FALSE,
-    '#description' => t('Check if any hreflang from the list is linked to another node, so other\'s node permalink will need to be regenerated.'),
+    '#description' => t('Check in case already exists on another node, so it will be reset in another node.'),
     '#access' => user_access('Administer Dennis Permalink'),
     '#weight' => 1,
   );
